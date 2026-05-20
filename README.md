@@ -47,7 +47,7 @@ make
 export PATH=$PATH:$(pwd)
 ```
 
-Или используйте полный путь к `whisper-cli` при запуске.
+Или используйте полный путь к `whisper-cli` через флаг `--whisper-cli`.
 
 **Проверка:**
 ```bash
@@ -56,18 +56,19 @@ export PATH=$PATH:$(pwd)
 
 ### 4. Модель whisper
 
-Скачиваем модель (требуется ~3GB):
+Скачиваем рекомендуемую модель `medium` (требуется ~1.5 GB):
 
 ```bash
 mkdir -p models
-wget -P models https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
+wget -P models https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin
 ```
 
-**Альтернативные модели (меньше размер, ниже качество):**
+**Альтернативные модели:**
 - `ggml-tiny.bin` (~75 MB)
 - `ggml-base.bin` (~142 MB)
 - `ggml-small.bin` (~466 MB)
 - `ggml-medium.bin` (~1.5 GB)
+- `ggml-large-v3.bin` (~2.9 GB)
 
 ## 📦 Сборка проекта
 
@@ -79,19 +80,41 @@ JAR-файл будет создан в `target/audio-transcriber-1.0-SNAPSHOT.j
 
 ## 🚀 Запуск
 
-### Базовый вариант (русский язык):
+### Интерактивный запуск:
+```bash
+java -jar target/audio-transcriber-1.0-SNAPSHOT.jar
+```
+
+Программа спросит:
+```text
+Select model:
+1. tiny   - fastest
+2. small  - balanced
+3. medium - better quality
+Or paste a custom model path.
+> 
+
+Select audio file:
+```
+
+### Базовый вариант (русский язык, `medium` по умолчанию):
 ```bash
 java -jar target/audio-transcriber-1.0-SNAPSHOT.jar input.mp3
 ```
 
 ### С указанием модели:
 ```bash
-java -jar target/audio-transcriber-1.0-SNAPSHOT.jar input.webm --model models/ggml-large-v3.bin
+java -jar target/audio-transcriber-1.0-SNAPSHOT.jar input.webm --model models/ggml-medium.bin
 ```
 
 ### С указанием языка:
 ```bash
 java -jar target/audio-transcriber-1.0-SNAPSHOT.jar input.wav --language en
+```
+
+### С указанием пути к whisper-cli:
+```bash
+java -jar target/audio-transcriber-1.0-SNAPSHOT.jar input.mp3 --whisper-cli /opt/whisper.cpp/build/bin/whisper-cli
 ```
 
 ### Полные опции:

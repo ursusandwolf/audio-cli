@@ -1,15 +1,19 @@
 package com.stt;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 
 /**
  * Utility class for common operations.
  */
 public class Utils {
+
+    private static final Set<String> SUPPORTED_AUDIO_EXTENSIONS = Set.of(
+        "mp3", "wav", "webm", "opus", "m4a", "aac", "flac", "ogg", "avi", "mkv", "mp4", "mov"
+    );
 
     /**
      * Checks if a command/executable exists in the system PATH.
@@ -73,6 +77,24 @@ public class Utils {
     }
 
     /**
+     * Validates that a path exists and is readable.
+     */
+    public static void validateInputPath(String filePath) {
+        if (filePath == null || filePath.isEmpty()) {
+            throw new IllegalArgumentException("Input path is empty");
+        }
+
+        Path path = Paths.get(filePath);
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("Input path not found: " + filePath);
+        }
+
+        if (!Files.isReadable(path)) {
+            throw new IllegalArgumentException("Input path is not readable: " + filePath);
+        }
+    }
+
+    /**
      * Gets the file extension from a path.
      */
     public static String getFileExtension(String filePath) {
@@ -84,5 +106,12 @@ public class Utils {
             return filePath.substring(lastDot + 1).toLowerCase();
         }
         return "";
+    }
+
+    /**
+     * Checks whether the file extension looks like a supported audio container.
+     */
+    public static boolean isSupportedAudioFile(Path path) {
+        return Files.isRegularFile(path) && SUPPORTED_AUDIO_EXTENSIONS.contains(getFileExtension(path.toString()));
     }
 }
