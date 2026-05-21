@@ -15,96 +15,70 @@ public class DefaultCommandExecutor implements CommandExecutor {
 
     @Override
     public int execute(String command, String... args) throws Exception {
-        return execute(command, 0, 0, args);
+        return execute(command, 0, args);
     }
 
     @Override
     public String executeAndCapture(String command, String... args) throws Exception {
-        return executeAndCapture(command, 0, 0, args);
+        return executeAndCapture(command, 0, args);
     }
 
     @Override
-    public int execute(String command, int timeoutSeconds, int retryCount, String... args) throws Exception {
-        int attempt = 0;
-        Exception lastException = null;
-        while (attempt <= retryCount) {
-            try {
-                ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
-                pb.redirectErrorStream(true);
-                Process process = pb.start();
-                
-                boolean finished = true;
-                if (timeoutSeconds > 0) {
-                    finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-                } else {
-                    process.waitFor();
-                }
-
-                if (!finished) {
-                    process.destroyForcibly();
-                    throw new TimeoutException("Command timed out after " + timeoutSeconds + "s: " + command);
-                }
-                
-                int exitCode = process.exitValue();
-                if (exitCode != 0) {
-                    throw new RuntimeException("Command failed with exit code " + exitCode + ": " + command);
-                }
-                return exitCode;
-            } catch (Exception e) {
-                lastException = e;
-                attempt++;
-                if (attempt <= retryCount) {
-                    System.err.println("Retrying command (" + attempt + "/" + retryCount + "): " + command);
-                }
-            }
+    public int execute(String command, int timeoutSeconds, String... args) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        
+        boolean finished = true;
+        if (timeoutSeconds > 0) {
+            finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+        } else {
+            process.waitFor();
         }
-        throw lastException;
+
+        if (!finished) {
+            process.destroyForcibly();
+            throw new TimeoutException("Command timed out after " + timeoutSeconds + "s: " + command);
+        }
+        
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            throw new RuntimeException("Command failed with exit code " + exitCode + ": " + command);
+        }
+        return exitCode;
     }
 
     @Override
-    public String executeAndCapture(String command, int timeoutSeconds, int retryCount, String... args) throws Exception {
-        int attempt = 0;
-        Exception lastException = null;
-        while (attempt <= retryCount) {
-            try {
-                ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
-                pb.redirectErrorStream(true);
-                Process process = pb.start();
-                
-                StringBuilder output = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        output.append(line).append(System.lineSeparator());
-                    }
-                }
-
-                boolean finished = true;
-                if (timeoutSeconds > 0) {
-                    finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-                } else {
-                    process.waitFor();
-                }
-
-                if (!finished) {
-                    process.destroyForcibly();
-                    throw new TimeoutException("Command timed out after " + timeoutSeconds + "s: " + command);
-                }
-                
-                int exitCode = process.exitValue();
-                if (exitCode != 0) {
-                    throw new RuntimeException("Command failed with exit code " + exitCode + ": " + command);
-                }
-                return output.toString();
-            } catch (Exception e) {
-                lastException = e;
-                attempt++;
-                if (attempt <= retryCount) {
-                    System.err.println("Retrying command (" + attempt + "/" + retryCount + "): " + command);
-                }
+    public String executeAndCapture(String command, int timeoutSeconds, String... args) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append(System.lineSeparator());
             }
         }
-        throw lastException;
+
+        boolean finished = true;
+        if (timeoutSeconds > 0) {
+            finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+        } else {
+            process.waitFor();
+        }
+
+        if (!finished) {
+            process.destroyForcibly();
+            throw new TimeoutException("Command timed out after " + timeoutSeconds + "s: " + command);
+        }
+        
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            throw new RuntimeException("Command failed with exit code " + exitCode + ": " + command);
+        }
+        return output.toString();
     }
 
     private List<String> buildCommandList(String command, String[] args) {

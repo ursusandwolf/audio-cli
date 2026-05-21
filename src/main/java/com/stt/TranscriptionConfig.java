@@ -8,6 +8,5 @@ public record TranscriptionConfig(
     String modelPath,
     String language,
     int threadLimit,
-    int timeoutSeconds,
-    int retryCount
+    int timeoutSeconds
 ) {}

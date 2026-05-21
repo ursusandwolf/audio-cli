@@ -39,6 +39,7 @@ public class Main {
         System.getProperty("user.home"),
         ".audio-transcriber-model"
     );
+    private static final TextProcessor TEXT_PROCESSOR = new TextProcessor();
 
     public static void main(String[] args) {
         CliOptions options = new CliOptions();
@@ -63,8 +64,7 @@ public class Main {
                 modelPath,
                 options.language(),
                 options.threadCount(),
-                options.timeoutSeconds(),
-                options.retryCount()
+                options.timeoutSeconds()
             );
             AudioConverter converter = new AudioConverter(COMMAND_EXECUTOR);
             WhisperRunner runner = new WhisperRunner(COMMAND_EXECUTOR, config);
@@ -406,9 +406,8 @@ public class Main {
     }
 
     static String formatTranscriptionText(String transcription) {
-        String normalized = transcription != null && !transcription.isEmpty()
-            ? transcription.trim()
-            : "[No speech detected]";
+        String cleaned = TEXT_PROCESSOR.cleanText(transcription);
+        String normalized = !cleaned.isEmpty() ? cleaned : "[No speech detected]";
         if (normalized.equals("[No speech detected]")) {
             return normalized;
         }
@@ -504,9 +503,6 @@ public class Main {
         @Parameter(names = {"--timeout"}, description = "Execution timeout in seconds")
         private int timeoutSeconds = 0;
 
-        @Parameter(names = {"--retries"}, description = "Number of retries on failure")
-        private int retryCount = 0;
-
         @Parameter(names = {"--cooldown"}, description = "Cooldown between files")
         private int cooldownSeconds = 0;
 
@@ -519,7 +515,6 @@ public class Main {
         public String whisperCliPath() { return whisperCliPath; }
         public int threadCount() { return threadCount; }
         public int timeoutSeconds() { return timeoutSeconds; }
-        public int retryCount() { return retryCount; }
         public int cooldownSeconds() { return cooldownSeconds; }
         public boolean isHelp() { return help; }
     }

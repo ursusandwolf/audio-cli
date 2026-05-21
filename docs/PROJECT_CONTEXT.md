@@ -6,14 +6,15 @@ It has been recently refactored to use Dependency Injection and JCommander for a
 It supports both single file transcription and batch directory processing.
 
 ## Recent Changes
-- Replaced stub argument parsing with JCommander.
-- Implemented timeout and retry logic in `DefaultCommandExecutor`.
-- Restored interactive features (input history, prompting for missing paths) that were lost in previous refactors.
-- Fixed several bugs identified in the code review (`docs/coderev.md`).
-- Unified command execution logic using Java Streams.
-- Ensured 100% test pass rate for existing tests.
+- **Removed Retry Logic**: Eliminated retry mechanisms from `CommandExecutor` as they are unnecessary for local system calls without network dependencies.
+- **Improved Text Processing**: 
+    - Introduced `TextProcessor` utilizing **Apache Lucene** for morphological analysis (lemmatization) and **Apache Commons Text** for robust HTML entity unescaping.
+    - Unified text formatting utilities into `TextFormatUtils`.
+- **Refactored Argument Parsing**: Switched to JCommander for better flag handling and positional argument support.
+- **Restored Interactive Features**: Re-implemented input history and prompting for missing paths.
+- **Ensured Test Integrity**: All 40 tests are passing after refactoring.
 
 ## Pending Items
-- Implement Lucene-based lemmatization for transcription post-processing if needed.
 - Add more robust error handling for FFmpeg conversion.
 - Implement progress bars for batch processing.
+- Add support for custom output formats (e.g., JSON, VTT).

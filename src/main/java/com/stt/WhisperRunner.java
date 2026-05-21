@@ -49,7 +49,6 @@ public class WhisperRunner {
             commandExecutor.execute(
                 config.whisperCliPath(),
                 config.timeoutSeconds(),
-                config.retryCount(),
                 args.toArray(new String[0])
             );
 
