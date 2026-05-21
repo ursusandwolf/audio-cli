@@ -2,8 +2,11 @@ package com.stt;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 /**
  * Standard implementation of CommandExecutor using ProcessBuilder.
@@ -12,35 +15,99 @@ public class DefaultCommandExecutor implements CommandExecutor {
 
     @Override
     public int execute(String command, String... args) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        return process.waitFor();
+        return execute(command, 0, 0, args);
     }
 
     @Override
     public String executeAndCapture(String command, String... args) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append(System.lineSeparator());
+        return executeAndCapture(command, 0, 0, args);
+    }
+
+    @Override
+    public int execute(String command, int timeoutSeconds, int retryCount, String... args) throws Exception {
+        int attempt = 0;
+        Exception lastException = null;
+        while (attempt <= retryCount) {
+            try {
+                ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                
+                boolean finished = true;
+                if (timeoutSeconds > 0) {
+                    finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+                } else {
+                    process.waitFor();
+                }
+
+                if (!finished) {
+                    process.destroyForcibly();
+                    throw new TimeoutException("Command timed out after " + timeoutSeconds + "s: " + command);
+                }
+                
+                int exitCode = process.exitValue();
+                if (exitCode != 0) {
+                    throw new RuntimeException("Command failed with exit code " + exitCode + ": " + command);
+                }
+                return exitCode;
+            } catch (Exception e) {
+                lastException = e;
+                attempt++;
+                if (attempt <= retryCount) {
+                    System.err.println("Retrying command (" + attempt + "/" + retryCount + "): " + command);
+                }
             }
-            process.waitFor();
-            return output.toString();
         }
+        throw lastException;
+    }
+
+    @Override
+    public String executeAndCapture(String command, int timeoutSeconds, int retryCount, String... args) throws Exception {
+        int attempt = 0;
+        Exception lastException = null;
+        while (attempt <= retryCount) {
+            try {
+                ProcessBuilder pb = new ProcessBuilder(buildCommandList(command, args));
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                
+                StringBuilder output = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        output.append(line).append(System.lineSeparator());
+                    }
+                }
+
+                boolean finished = true;
+                if (timeoutSeconds > 0) {
+                    finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+                } else {
+                    process.waitFor();
+                }
+
+                if (!finished) {
+                    process.destroyForcibly();
+                    throw new TimeoutException("Command timed out after " + timeoutSeconds + "s: " + command);
+                }
+                
+                int exitCode = process.exitValue();
+                if (exitCode != 0) {
+                    throw new RuntimeException("Command failed with exit code " + exitCode + ": " + command);
+                }
+                return output.toString();
+            } catch (Exception e) {
+                lastException = e;
+                attempt++;
+                if (attempt <= retryCount) {
+                    System.err.println("Retrying command (" + attempt + "/" + retryCount + "): " + command);
+                }
+            }
+        }
+        throw lastException;
     }
 
     private List<String> buildCommandList(String command, String[] args) {
-        List<String> list = new ArrayList<>();
-        list.add(command);
-        for (String arg : args) {
-            list.add(arg);
-        }
-        return list;
+        return Stream.concat(Stream.of(command), Arrays.stream(args)).toList();
     }
 }

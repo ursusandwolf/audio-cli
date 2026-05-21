@@ -7,5 +7,7 @@ public record TranscriptionConfig(
     String whisperCliPath,
     String modelPath,
     String language,
-    int threadLimit
+    int threadLimit,
+    int timeoutSeconds,
+    int retryCount
 ) {}

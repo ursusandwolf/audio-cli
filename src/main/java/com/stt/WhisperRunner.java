@@ -46,7 +46,12 @@ public class WhisperRunner {
             args.add("--output-file");
             args.add(outputPrefix.toString());
 
-            commandExecutor.execute(config.whisperCliPath(), args.toArray(new String[0]));
+            commandExecutor.execute(
+                config.whisperCliPath(),
+                config.timeoutSeconds(),
+                config.retryCount(),
+                args.toArray(new String[0])
+            );
 
             if (!Files.exists(outputTextFile)) {
                 throw new IOException("whisper.cpp completed but did not produce transcription text output");
@@ -79,5 +84,71 @@ public class WhisperRunner {
         }
 
         return result.toString().trim();
+    }
+
+    public static int resolveDefaultThreadLimit() {
+        return 1;
+    }
+
+    public static int validateThreadLimit(int threadLimit) {
+        if (threadLimit < 1) {
+            throw new IllegalArgumentException("--threads must be 1 or greater");
+        }
+        return threadLimit;
+    }
+
+    static Integer extractProgressPercent(String line) {
+        if (line == null || !line.contains("progress =")) {
+            return null;
+        }
+        try {
+            String part = line.substring(line.indexOf("progress =") + 10).trim();
+            int spaceIdx = part.indexOf('%');
+            if (spaceIdx > 0) {
+                return Integer.parseInt(part.substring(0, spaceIdx).trim());
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
+    }
+
+    static String formatProgressBar(int percent) {
+        int width = 20;
+        int completed = (int) (width * (percent / 100.0));
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < width; i++) {
+            if (i < completed) sb.append("#");
+            else sb.append("-");
+        }
+        sb.append("]  ").append(percent).append("%");
+        return sb.toString();
+    }
+
+    static void terminateProcess(Process process, long pid) throws IOException {
+        process.destroy();
+        try {
+            if (!process.waitFor(1, java.util.concurrent.TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                if (!process.waitFor(1, java.util.concurrent.TimeUnit.SECONDS)) {
+                    throw new IOException("Failed to terminate whisper.cpp process PID " + pid);
+                }
+            }
+        } catch (InterruptedException e) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    static Thread createShutdownHook(Process process, long pid) {
+        return new Thread(() -> {
+            try {
+                if (process.isAlive()) {
+                    terminateProcess(process, pid);
+                }
+            } catch (IOException e) {
+                System.err.println("Warning: " + e.getMessage());
+            }
+        });
     }
 }
